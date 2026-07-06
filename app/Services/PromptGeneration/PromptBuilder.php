@@ -34,14 +34,18 @@ class PromptBuilder
             ? [$finding]
             : $project->findings()->open()->orderByRaw($this->severityOrder())->get()->all();
 
+        // Single-finding prompts stay focused: skip the (expensive) full file tree
+        // and key-file dumps — the agent runs in the repo and can read files itself.
+        $wholeProject = $finding === null;
+
         $context = [
             'project' => $project,
             'metrics' => $metrics,
             'path' => $path,
             'readme' => $this->fullReadme($path),
             'gitLog' => $this->recentGitLog($path),
-            'fileTree' => $this->context->fileTree($path),
-            'keyFiles' => $this->context->keyFileExcerpts($path, $metrics['stack'] ?? null),
+            'fileTree' => $wholeProject ? $this->context->fileTree($path) : null,
+            'keyFiles' => $wholeProject ? $this->context->keyFileExcerpts($path, $metrics['stack'] ?? null) : [],
             'findings' => $openFindings,
             'scopedFinding' => $finding,
         ];

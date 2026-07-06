@@ -47,26 +47,9 @@ _No README found._
 _No commit history available._
 @endif
 
-## Project structure
-@if(!empty($fileTree))
-```
-{!! $fileTree !!}
-```
-@else
-_Could not read project structure._
-@endif
-
-@if(!empty($keyFiles))
-## Key files
-@foreach($keyFiles as $kf)
-### {!! $kf['path'] !!}
-```
-{!! $kf['content'] !!}
-```
-@endforeach
-@endif
-
 ## Your task
-Resolve the gap described above for this project. Explain the change, then
-implement it. Keep changes minimal and consistent with the project's existing
+Resolve **only the single gap described above** for this project — do not attempt
+to fix unrelated issues. You are working inside this repository and can read any
+files you need directly, so explore the relevant code first. Explain the change,
+then implement it. Keep changes minimal and consistent with the project's existing
 conventions.

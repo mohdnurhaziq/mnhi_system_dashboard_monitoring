@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import StackBadge from '@/Components/StackBadge';
@@ -28,7 +28,16 @@ export default function ProjectShow({ project }) {
     const [openLatestPrompt, setOpenLatestPrompt] = useState(false);
     const [aiOptimize, setAiOptimize] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [showPromptModal, setShowPromptModal] = useState(false);
     const promptsRef = useRef(null);
+
+    // Close the prompt modal on Escape.
+    useEffect(() => {
+        if (!showPromptModal) return;
+        const onKey = (e) => e.key === 'Escape' && setShowPromptModal(false);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [showPromptModal]);
     const metrics = project.metrics ?? {};
     const git = metrics.git ?? {};
     const files = metrics.files ?? {};
@@ -56,15 +65,11 @@ export default function ProjectShow({ project }) {
                 preserveScroll: true,
                 onStart: () => setGenerating(true),
                 onFinish: () => setGenerating(false),
-                // Reveal the result: expand the newest prompt and scroll to it so
-                // it's obvious a copy-paste prompt was created (not that anything
-                // was "fixed" on disk).
+                // Reveal the result in a modal so it's unmistakably the ONE prompt
+                // just created — not lost in the stacked history list below.
                 onSuccess: () => {
                     setOpenLatestPrompt(true);
-                    setTimeout(
-                        () => promptsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-                        50,
-                    );
+                    setShowPromptModal(true);
                 },
             },
         );
@@ -102,6 +107,46 @@ export default function ProjectShow({ project }) {
             }
         >
             <Head title={project.name} />
+
+            {/* Prompt modal — shows the single prompt just generated, front and centre. */}
+            {showPromptModal && (project.generated_prompts ?? [])[0] && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                    onClick={() => setShowPromptModal(false)}
+                >
+                    <div
+                        className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-3">
+                            <div className="min-w-0">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600">
+                                    Prompt ready
+                                </p>
+                                <h3 className="truncate text-sm font-semibold text-gray-900">
+                                    {project.generated_prompts[0].title}
+                                </h3>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <CopyButton text={project.generated_prompts[0].body} />
+                                <button
+                                    onClick={() => setShowPromptModal(false)}
+                                    aria-label="Close"
+                                    className="rounded-md px-2 py-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                        <p className="px-5 pt-3 text-xs text-gray-500">
+                            Copy this and paste it into Claude Code in that project to carry out the work.
+                        </p>
+                        <pre className="m-5 mt-2 flex-1 overflow-auto whitespace-pre-wrap rounded bg-gray-50 p-4 text-xs text-gray-700">
+                            {project.generated_prompts[0].body}
+                        </pre>
+                    </div>
+                </div>
+            )}
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
                 <StackBadge stack={project.stack} />
