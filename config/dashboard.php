@@ -1,12 +1,17 @@
 <?php
 
 use App\Services\RuleEngine\Rules\AmbiguousProjectRootRule;
+use App\Services\RuleEngine\Rules\DependenciesNotInstalledRule;
 use App\Services\RuleEngine\Rules\HighTodoDensityRule;
+use App\Services\RuleEngine\Rules\InvalidComposerJsonRule;
+use App\Services\RuleEngine\Rules\MissingAppKeyRule;
 use App\Services\RuleEngine\Rules\MissingCiRule;
 use App\Services\RuleEngine\Rules\MissingEnvExampleRule;
+use App\Services\RuleEngine\Rules\MissingEnvFileRule;
 use App\Services\RuleEngine\Rules\MissingReadmeRule;
 use App\Services\RuleEngine\Rules\MissingTestsRule;
 use App\Services\RuleEngine\Rules\NoGitRepoRule;
+use App\Services\RuleEngine\Rules\PhpSyntaxErrorRule;
 use App\Services\RuleEngine\Rules\StaleRepoRule;
 use App\Services\RuleEngine\Rules\UncommittedChangesRule;
 use App\Services\RuleEngine\Rules\ZeroCommitsRule;
@@ -85,6 +90,13 @@ return [
         'missing_ci' => MissingCiRule::class,
         'high_todo_density' => HighTodoDensityRule::class,
         'ambiguous_project_root' => AmbiguousProjectRootRule::class,
+
+        // Error-category rules (real local diagnostics, no AI).
+        'dependencies_not_installed' => DependenciesNotInstalledRule::class,
+        'missing_env_file' => MissingEnvFileRule::class,
+        'missing_app_key' => MissingAppKeyRule::class,
+        'php_syntax_error' => PhpSyntaxErrorRule::class,
+        'invalid_composer_json' => InvalidComposerJsonRule::class,
     ],
 
     'rules_enabled' => [
@@ -98,5 +110,24 @@ return [
         'missing_ci' => true,
         'high_todo_density' => true,
         'ambiguous_project_root' => true,
+        'dependencies_not_installed' => true,
+        'missing_env_file' => true,
+        'missing_app_key' => true,
+        'php_syntax_error' => true,
+        'invalid_composer_json' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ollama (local LLM) — powers idea/UI/error analysis
+    |--------------------------------------------------------------------------
+    | Fully local: talks to a locally-running Ollama server. If the server is
+    | unreachable, AI analysis degrades gracefully and heuristics still work.
+    */
+    'ollama' => [
+        'enabled' => env('DASHBOARD_OLLAMA_ENABLED', true),
+        'base_url' => env('DASHBOARD_OLLAMA_URL', 'http://localhost:11434'),
+        'model' => env('DASHBOARD_OLLAMA_MODEL', 'qwen2.5-coder:7b'),
+        'timeout' => env('DASHBOARD_OLLAMA_TIMEOUT', 180),
     ],
 ];

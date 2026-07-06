@@ -53,6 +53,11 @@ export default function AppLayout({ title, actions = null, children }) {
                             {flash.success}
                         </div>
                     )}
+                    {flash.error && (
+                        <div className="mx-8 mt-4 rounded-md bg-red-50 px-4 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+                            {flash.error}
+                        </div>
+                    )}
 
                     <main className="p-8">{children}</main>
                 </div>

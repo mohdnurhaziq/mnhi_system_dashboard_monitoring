@@ -9,5 +9,6 @@ class FindingResult
         public string $severity,
         public string $message,
         public array $details = [],
+        public string $category = 'gap',
     ) {}
 }

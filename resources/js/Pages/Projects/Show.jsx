@@ -1,9 +1,18 @@
+import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import StackBadge from '@/Components/StackBadge';
 import StatusBadge from '@/Components/StatusBadge';
 import SeverityChip from '@/Components/SeverityChip';
 import CopyButton from '@/Components/CopyButton';
+
+const CATEGORY_META = {
+    error: { label: 'Errors', hint: 'Broken or risky — will cause failures', accent: 'text-red-700' },
+    gap: { label: 'Gaps', hint: 'Missing hygiene / documentation / tests', accent: 'text-amber-700' },
+    idea: { label: 'Ideas', hint: 'AI-suggested features & improvements', accent: 'text-indigo-700' },
+    ui: { label: 'UI / UX', hint: 'AI-suggested interface improvements', accent: 'text-fuchsia-700' },
+};
+const CATEGORY_ORDER = ['error', 'gap', 'idea', 'ui'];
 
 function MetricRow({ label, value }) {
     return (
@@ -15,10 +24,17 @@ function MetricRow({ label, value }) {
 }
 
 export default function ProjectShow({ project }) {
+    const [analyzing, setAnalyzing] = useState(false);
     const metrics = project.metrics ?? {};
     const git = metrics.git ?? {};
     const files = metrics.files ?? {};
     const todos = metrics.todos ?? {};
+
+    const findings = project.findings ?? [];
+    const byCategory = CATEGORY_ORDER.map((cat) => ({
+        cat,
+        items: findings.filter((f) => (f.category ?? 'gap') === cat),
+    })).filter((group) => group.items.length > 0);
 
     const generatePrompt = (findingId = null) => {
         router.post(
@@ -36,12 +52,27 @@ export default function ProjectShow({ project }) {
         <AppLayout
             title={project.name}
             actions={
-                <button
-                    onClick={() => router.post(`/projects/${project.id}/scan`, {}, { preserveScroll: true })}
-                    className="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
-                >
-                    Rescan
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            setAnalyzing(true);
+                            router.post(`/projects/${project.id}/analyze`, {}, {
+                                preserveScroll: true,
+                                onFinish: () => setAnalyzing(false),
+                            });
+                        }}
+                        disabled={analyzing}
+                        className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                        {analyzing ? 'Analyzing…' : 'AI Analysis'}
+                    </button>
+                    <button
+                        onClick={() => router.post(`/projects/${project.id}/scan`, {}, { preserveScroll: true })}
+                        className="rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                    >
+                        Rescan
+                    </button>
+                </div>
             }
         >
             <Head title={project.name} />
@@ -88,9 +119,9 @@ export default function ProjectShow({ project }) {
                 {/* Right: findings + prompts */}
                 <div className="space-y-6 lg:col-span-2">
                     <div className="rounded-lg border border-gray-200 bg-white p-5">
-                        <div className="mb-3 flex items-center justify-between">
+                        <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-gray-700">
-                                Findings ({project.findings?.length ?? 0})
+                                Findings ({findings.length})
                             </h3>
                             <button
                                 onClick={() => generatePrompt()}
@@ -100,53 +131,74 @@ export default function ProjectShow({ project }) {
                             </button>
                         </div>
 
-                        <div className="space-y-2">
-                            {(project.findings ?? []).map((f) => (
-                                <div
-                                    key={f.id}
-                                    className={`flex items-start justify-between rounded-md border p-3 ${
-                                        f.status === 'dismissed'
-                                            ? 'border-gray-100 bg-gray-50 opacity-60'
-                                            : 'border-gray-200'
-                                    }`}
-                                >
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <SeverityChip severity={f.severity} />
-                                            <span className="text-xs text-gray-400">{f.rule_key}</span>
+                        {byCategory.length === 0 && (
+                            <p className="py-4 text-center text-sm text-gray-400">
+                                No findings yet. Run a Rescan for heuristics, or “AI Analysis”
+                                for ideas &amp; UI suggestions.
+                            </p>
+                        )}
+
+                        <div className="space-y-5">
+                            {byCategory.map(({ cat, items }) => {
+                                const meta = CATEGORY_META[cat];
+                                return (
+                                    <div key={cat}>
+                                        <div className="mb-2 flex items-baseline gap-2">
+                                            <h4 className={`text-sm font-semibold ${meta.accent}`}>
+                                                {meta.label} ({items.length})
+                                            </h4>
+                                            <span className="text-xs text-gray-400">{meta.hint}</span>
                                         </div>
-                                        <p className="mt-1 text-sm text-gray-800">{f.message}</p>
+                                        <div className="space-y-2">
+                                            {items.map((f) => (
+                                                <div
+                                                    key={f.id}
+                                                    className={`flex items-start justify-between rounded-md border p-3 ${
+                                                        f.status === 'dismissed'
+                                                            ? 'border-gray-100 bg-gray-50 opacity-60'
+                                                            : 'border-gray-200'
+                                                    }`}
+                                                >
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <SeverityChip severity={f.severity} />
+                                                            {f.source === 'llm' && (
+                                                                <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">
+                                                                    AI
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="mt-1 text-sm font-medium text-gray-800">
+                                                            {f.message}
+                                                        </p>
+                                                        {f.details?.detail && (
+                                                            <p className="mt-0.5 text-xs text-gray-500">
+                                                                {f.details.detail}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="ml-3 flex shrink-0 flex-col items-end gap-1">
+                                                        <button
+                                                            onClick={() => generatePrompt(f.id)}
+                                                            className="text-xs text-indigo-600 hover:underline"
+                                                        >
+                                                            Fix prompt
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                dismiss(f, f.status === 'open' ? 'dismissed' : 'open')
+                                                            }
+                                                            className="text-xs text-gray-400 hover:text-gray-600"
+                                                        >
+                                                            {f.status === 'open' ? 'Dismiss' : 'Reopen'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="ml-3 flex shrink-0 flex-col items-end gap-1">
-                                        <button
-                                            onClick={() => generatePrompt(f.id)}
-                                            className="text-xs text-indigo-600 hover:underline"
-                                        >
-                                            Fix prompt
-                                        </button>
-                                        {f.status === 'open' ? (
-                                            <button
-                                                onClick={() => dismiss(f, 'dismissed')}
-                                                className="text-xs text-gray-400 hover:text-gray-600"
-                                            >
-                                                Dismiss
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => dismiss(f, 'open')}
-                                                className="text-xs text-gray-400 hover:text-gray-600"
-                                            >
-                                                Reopen
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {(project.findings ?? []).length === 0 && (
-                                <p className="py-4 text-center text-sm text-gray-400">
-                                    No findings — this project looks healthy.
-                                </p>
-                            )}
+                                );
+                            })}
                         </div>
                     </div>
 

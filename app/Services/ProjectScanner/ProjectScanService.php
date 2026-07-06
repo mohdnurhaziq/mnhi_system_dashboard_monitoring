@@ -5,6 +5,7 @@ namespace App\Services\ProjectScanner;
 use App\Models\Finding;
 use App\Models\Project;
 use App\Services\ProjectDiscovery\ProjectRootResolver;
+use App\Services\ProjectScanner\Metrics\DiagnosticsGatherer;
 use App\Services\ProjectScanner\Metrics\FileMarkerGatherer;
 use App\Services\ProjectScanner\Metrics\GitMetricsGatherer;
 use App\Services\ProjectScanner\Metrics\LaravelStructureGatherer;
@@ -22,6 +23,7 @@ class ProjectScanService
         private FileMarkerGatherer $files,
         private LaravelStructureGatherer $laravel,
         private TodoScanner $todos,
+        private DiagnosticsGatherer $diagnostics,
         private RuleEngineRunner $ruleEngine,
     ) {}
 
@@ -72,6 +74,7 @@ class ProjectScanService
         $git = $this->git->gather($resolvedPath);
         $files = $this->files->gather($resolvedPath);
         $todos = $this->todos->gather($resolvedPath);
+        $diagnostics = $this->diagnostics->gather($resolvedPath, $stack['stack']);
 
         $metrics = [
             'stack' => $stack['stack'],
@@ -80,6 +83,7 @@ class ProjectScanService
             'git' => $git,
             'files' => $files,
             'todos' => $todos,
+            'diagnostics' => $diagnostics,
             'root_resolution' => [
                 'configured_path' => $configuredPath,
                 'resolved_path' => $resolvedPath,
@@ -118,6 +122,8 @@ class ProjectScanService
 
             // Refresh message/severity/details even for dismissed findings,
             // but leave the dismissed status intact.
+            $finding->category = $result->category;
+            $finding->source = 'heuristic';
             $finding->severity = $result->severity;
             $finding->message = $result->message;
             $finding->details = $result->details;
@@ -125,8 +131,10 @@ class ProjectScanService
             $finding->save();
         }
 
-        // Delete any finding not re-detected this scan.
+        // Delete any heuristic finding not re-detected this scan.
+        // LLM-sourced findings are managed separately and must survive rescans.
         $project->findings()
+            ->where('source', 'heuristic')
             ->when(
                 ! empty($seenKeys),
                 fn ($q) => $q->whereNotIn('rule_key', $seenKeys)

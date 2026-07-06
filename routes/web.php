@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FindingController;
 use App\Http\Controllers\GeneratedPromptController;
@@ -17,6 +18,7 @@ Route::patch('/projects/{project}', [ProjectController::class, 'update'])->name(
 Route::post('/projects/scan', [ScanController::class, 'scanAll'])->name('projects.scan-all');
 Route::post('/projects/discover', [ScanController::class, 'discover'])->name('projects.discover');
 Route::post('/projects/{project}/scan', [ScanController::class, 'scanOne'])->name('projects.scan-one');
+Route::post('/projects/{project}/analyze', [AnalysisController::class, 'analyze'])->name('projects.analyze');
 
 Route::patch('/findings/{finding}', [FindingController::class, 'update'])->name('findings.update');
 
