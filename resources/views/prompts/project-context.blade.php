@@ -40,6 +40,25 @@ _No README found in this project._
 _No commit history available._
 @endif
 
+## Project structure
+@if(!empty($fileTree))
+```
+{{ $fileTree }}
+```
+@else
+_Could not read project structure._
+@endif
+
+@if(!empty($keyFiles))
+## Key files
+@foreach($keyFiles as $kf)
+### {{ $kf['path'] }}
+```
+{{ $kf['content'] }}
+```
+@endforeach
+@endif
+
 ## Your task
 Review this project and help me address the gaps above. Prioritise by severity
 (critical first). For each item, explain what to change and why, then implement

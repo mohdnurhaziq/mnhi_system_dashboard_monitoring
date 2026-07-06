@@ -10,6 +10,8 @@ use Symfony\Component\Process\Process;
 
 class PromptBuilder
 {
+    public function __construct(private ProjectContextGatherer $context) {}
+
     /**
      * Build (and persist) a ready-to-paste prompt for a project, optionally
      * scoped to a single finding. Pure local template assembly — no AI calls.
@@ -29,6 +31,8 @@ class PromptBuilder
             'path' => $path,
             'readme' => $this->fullReadme($path),
             'gitLog' => $this->recentGitLog($path),
+            'fileTree' => $this->context->fileTree($path),
+            'keyFiles' => $this->context->keyFileExcerpts($path, $metrics['stack'] ?? null),
             'findings' => $openFindings,
             'scopedFinding' => $finding,
         ];

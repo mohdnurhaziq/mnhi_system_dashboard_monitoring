@@ -44,6 +44,25 @@ _No README found._
 _No commit history available._
 @endif
 
+## Project structure
+@if(!empty($fileTree))
+```
+{{ $fileTree }}
+```
+@else
+_Could not read project structure._
+@endif
+
+@if(!empty($keyFiles))
+## Key files
+@foreach($keyFiles as $kf)
+### {{ $kf['path'] }}
+```
+{{ $kf['content'] }}
+```
+@endforeach
+@endif
+
 ## Your task
 Resolve the gap described above for this project. Explain the change, then
 implement it. Keep changes minimal and consistent with the project's existing
