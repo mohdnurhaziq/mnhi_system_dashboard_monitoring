@@ -33,9 +33,14 @@ export default function ProjectShow({ project }) {
     const todos = metrics.todos ?? {};
 
     const findings = project.findings ?? [];
+    // Resolved findings (auto-detected fixes or manually resolved) are shown in
+    // their own section, not mixed into the active category groups.
+    const activeFindings = findings.filter((f) => f.status !== 'resolved');
+    const resolvedFindings = findings.filter((f) => f.status === 'resolved');
+    const openCount = findings.filter((f) => f.status === 'open').length;
     const byCategory = CATEGORY_ORDER.map((cat) => ({
         cat,
-        items: findings.filter((f) => (f.category ?? 'gap') === cat),
+        items: activeFindings.filter((f) => (f.category ?? 'gap') === cat),
     })).filter((group) => group.items.length > 0);
 
     const generatePrompt = (findingId = null) => {
@@ -150,7 +155,7 @@ export default function ProjectShow({ project }) {
                     <div className="rounded-lg border border-gray-200 bg-white p-5">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-gray-700">
-                                Findings ({findings.length})
+                                Findings ({openCount} open)
                             </h3>
                             <button
                                 onClick={() => generatePrompt()}
@@ -162,10 +167,16 @@ export default function ProjectShow({ project }) {
                         </div>
 
                         {byCategory.length === 0 && (
-                            <p className="py-4 text-center text-sm text-gray-400">
-                                No findings yet. Run a Rescan for heuristics, or “AI Analysis”
-                                for ideas &amp; UI suggestions.
-                            </p>
+                            resolvedFindings.length > 0 ? (
+                                <p className="py-4 text-center text-sm text-emerald-600">
+                                    ✓ No open findings — everything detected here has been resolved.
+                                </p>
+                            ) : (
+                                <p className="py-4 text-center text-sm text-gray-400">
+                                    No findings yet. Run a Rescan for heuristics, or “AI Analysis”
+                                    for ideas &amp; UI suggestions.
+                                </p>
+                            )
                         )}
 
                         <div className="space-y-5">
@@ -232,6 +243,42 @@ export default function ProjectShow({ project }) {
                             })}
                         </div>
                     </div>
+
+                    {resolvedFindings.length > 0 && (
+                        <details className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-5">
+                            <summary className="cursor-pointer text-sm font-semibold text-emerald-700">
+                                Resolved ✓ ({resolvedFindings.length})
+                                <span className="ml-2 font-normal text-emerald-600/80">
+                                    fixed and no longer detected — click to review
+                                </span>
+                            </summary>
+                            <div className="mt-3 space-y-2">
+                                {resolvedFindings.map((f) => (
+                                    <div
+                                        key={f.id}
+                                        className="flex items-start justify-between gap-3 rounded-md border border-emerald-100 bg-white p-3"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-gray-500 line-through">
+                                                {f.message}
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-emerald-600">
+                                                Resolved{f.resolved_at ? ` ${f.resolved_at.slice(0, 10)}` : ''}
+                                                {f.source === 'llm' ? ' · AI finding' : ''}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => dismiss(f, 'open')}
+                                            title="Mark this as an open finding again"
+                                            className="shrink-0 text-xs text-gray-400 hover:text-gray-600"
+                                        >
+                                            Reopen
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </details>
+                    )}
 
                     {files.readme_excerpt && (
                         <div className="rounded-lg border border-gray-200 bg-white p-5">

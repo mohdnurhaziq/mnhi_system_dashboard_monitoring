@@ -13,6 +13,7 @@ use App\Services\ProjectScanner\Metrics\TodoScanner;
 use App\Services\RuleEngine\FindingResult;
 use App\Services\RuleEngine\RuleEngineRunner;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class ProjectScanService
 {
@@ -100,7 +101,7 @@ class ProjectScanService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, FindingResult>  $results
+     * @param  Collection<int, FindingResult>  $results
      */
     private function reconcileFindings(Project $project, $results): void
     {
@@ -118,6 +119,10 @@ class ProjectScanService
             if (! $finding->exists) {
                 $finding->status = 'open';
                 $finding->first_detected_at = now();
+            } elseif ($finding->status === 'resolved') {
+                // Regression: an issue we'd marked fixed is back — reopen it.
+                $finding->status = 'open';
+                $finding->resolved_at = null;
             }
 
             // Refresh message/severity/details even for dismissed findings,
@@ -131,15 +136,21 @@ class ProjectScanService
             $finding->save();
         }
 
-        // Delete any heuristic finding not re-detected this scan.
+        // Heuristic findings not re-detected this scan are no longer present.
         // LLM-sourced findings are managed separately and must survive rescans.
-        $project->findings()
+        $gone = $project->findings()
             ->where('source', 'heuristic')
-            ->when(
-                ! empty($seenKeys),
-                fn ($q) => $q->whereNotIn('rule_key', $seenKeys)
-            )
-            ->delete();
+            ->when(! empty($seenKeys), fn ($q) => $q->whereNotIn('rule_key', $seenKeys));
+
+        // An open finding that disappeared was fixed — mark it resolved (keep it
+        // as a record) rather than deleting it silently.
+        (clone $gone)->where('status', 'open')->update([
+            'status' => 'resolved',
+            'resolved_at' => now(),
+        ]);
+
+        // A dismissed finding that's also gone has no value to keep around.
+        (clone $gone)->where('status', 'dismissed')->delete();
     }
 
     private function pruneSnapshots(Project $project): void

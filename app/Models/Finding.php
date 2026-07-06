@@ -14,6 +14,7 @@ class Finding extends Model
         'details' => 'array',
         'first_detected_at' => 'datetime',
         'last_seen_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
     public function project(): BelongsTo
@@ -24,5 +25,10 @@ class Finding extends Model
     public function scopeOpen(Builder $query): Builder
     {
         return $query->where('status', 'open');
+    }
+
+    public function scopeResolved(Builder $query): Builder
+    {
+        return $query->where('status', 'resolved');
     }
 }
