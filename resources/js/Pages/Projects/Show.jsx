@@ -226,9 +226,23 @@ export default function ProjectShow({ project }) {
                                                         >
                                                             Get fix prompt →
                                                         </button>
+                                                        {f.status === 'open' && (
+                                                            <button
+                                                                onClick={() => dismiss(f, 'resolved')}
+                                                                title="I've fixed this — move it to Resolved. Use this for AI findings, which a rescan can't auto-detect."
+                                                                className="text-xs font-medium text-emerald-600 hover:underline"
+                                                            >
+                                                                ✓ Mark fixed
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() =>
                                                                 dismiss(f, f.status === 'open' ? 'dismissed' : 'open')
+                                                            }
+                                                            title={
+                                                                f.status === 'open'
+                                                                    ? "Not relevant — hide it without marking it fixed."
+                                                                    : 'Move back to open findings.'
                                                             }
                                                             className="text-xs text-gray-400 hover:text-gray-600"
                                                         >
