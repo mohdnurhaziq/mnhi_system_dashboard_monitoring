@@ -2,24 +2,27 @@
     $git = $metrics['git'] ?? [];
     $f = $scopedFinding;
 @endphp
-# Task for project: {{ $project->name }}
+{{-- Raw ({!! !!}) output on purpose: this template renders a plain-text markdown
+     prompt for copy-paste, never HTML. {{ }} would HTML-escape quotes/brackets in
+     README/code/findings (e.g. " -> &quot;), corrupting the prompt. --}}
+# Task for project: {!! $project->name !!}
 
-**Path:** {{ $path }}
-**Stack:** {{ $metrics['stack'] ?? 'unknown' }}@if(!empty($metrics['stack_version'])) ({{ $metrics['stack_version'] }})@endif
+**Path:** {!! $path !!}
+**Stack:** {!! $metrics['stack'] ?? 'unknown' !!}@if(!empty($metrics['stack_version'])) ({!! $metrics['stack_version'] !!})@endif
 
 ## Gap to address
-**[{{ strtoupper($f->severity) }}]** {{ $f->message }}
+**[{!! strtoupper($f->severity) !!}]** {!! $f->message !!}
 
 @if(!empty($f->details))
 ### Details
 ```
-{{ json_encode($f->details, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}
+{!! json_encode($f->details, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) !!}
 ```
 @endif
 
 ## Project context
 @if(!empty($git['has_commits']))
-- Git: {{ $git['commit_count'] ?? 0 }} commits, last on {{ $git['last_commit_at'] ?? 'unknown' }}
+- Git: {!! $git['commit_count'] ?? 0 !!} commits, last on {!! $git['last_commit_at'] ?? 'unknown' !!}
 @elseif(!empty($git['has_git']))
 - Git: initialised but zero commits
 @else
@@ -29,7 +32,7 @@
 ## README
 @if($readme)
 ```
-{{ $readme }}
+{!! $readme !!}
 ```
 @else
 _No README found._
@@ -38,7 +41,7 @@ _No README found._
 ## Recent commits
 @if($gitLog)
 ```
-{{ $gitLog }}
+{!! $gitLog !!}
 ```
 @else
 _No commit history available._
@@ -47,7 +50,7 @@ _No commit history available._
 ## Project structure
 @if(!empty($fileTree))
 ```
-{{ $fileTree }}
+{!! $fileTree !!}
 ```
 @else
 _Could not read project structure._
@@ -56,9 +59,9 @@ _Could not read project structure._
 @if(!empty($keyFiles))
 ## Key files
 @foreach($keyFiles as $kf)
-### {{ $kf['path'] }}
+### {!! $kf['path'] !!}
 ```
-{{ $kf['content'] }}
+{!! $kf['content'] !!}
 ```
 @endforeach
 @endif

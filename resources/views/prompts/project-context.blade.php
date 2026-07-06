@@ -2,13 +2,16 @@
     $git = $metrics['git'] ?? [];
     $files = $metrics['files'] ?? [];
 @endphp
-# Project: {{ $project->name }}
+{{-- Raw ({!! !!}) output on purpose: this template renders a plain-text markdown
+     prompt for copy-paste, never HTML. {{ }} would HTML-escape quotes/brackets in
+     README/code/findings (e.g. " -> &quot;), corrupting the prompt. --}}
+# Project: {!! $project->name !!}
 
-**Path:** {{ $path }}
-**Stack:** {{ $metrics['stack'] ?? 'unknown' }}@if(!empty($metrics['stack_version'])) ({{ $metrics['stack_version'] }})@endif
+**Path:** {!! $path !!}
+**Stack:** {!! $metrics['stack'] ?? 'unknown' !!}@if(!empty($metrics['stack_version'])) ({!! $metrics['stack_version'] !!})@endif
 
 @if(!empty($git['has_commits']))
-**Git:** {{ $git['commit_count'] ?? 0 }} commits, last on {{ $git['last_commit_at'] ?? 'unknown' }}, branch `{{ $git['current_branch'] ?? 'n/a' }}`@if(!empty($git['uncommitted_files'])), {{ $git['uncommitted_files'] }} uncommitted file(s)@endif
+**Git:** {!! $git['commit_count'] ?? 0 !!} commits, last on {!! $git['last_commit_at'] ?? 'unknown' !!}, branch `{!! $git['current_branch'] ?? 'n/a' !!}`@if(!empty($git['uncommitted_files'])), {!! $git['uncommitted_files'] !!} uncommitted file(s)@endif
 @elseif(!empty($git['has_git']))
 **Git:** repository initialised but has **zero commits**.
 @else
@@ -17,7 +20,7 @@
 
 ## Detected gaps
 @forelse($findings as $f)
-- **[{{ strtoupper($f->severity) }}]** {{ $f->message }}
+- **[{!! strtoupper($f->severity) !!}]** {!! $f->message !!}
 @empty
 - None detected — project looks healthy on the tracked heuristics.
 @endforelse
@@ -25,7 +28,7 @@
 ## README
 @if($readme)
 ```
-{{ $readme }}
+{!! $readme !!}
 ```
 @else
 _No README found in this project._
@@ -34,7 +37,7 @@ _No README found in this project._
 ## Recent commits
 @if($gitLog)
 ```
-{{ $gitLog }}
+{!! $gitLog !!}
 ```
 @else
 _No commit history available._
@@ -43,7 +46,7 @@ _No commit history available._
 ## Project structure
 @if(!empty($fileTree))
 ```
-{{ $fileTree }}
+{!! $fileTree !!}
 ```
 @else
 _Could not read project structure._
@@ -52,9 +55,9 @@ _Could not read project structure._
 @if(!empty($keyFiles))
 ## Key files
 @foreach($keyFiles as $kf)
-### {{ $kf['path'] }}
+### {!! $kf['path'] !!}
 ```
-{{ $kf['content'] }}
+{!! $kf['content'] !!}
 ```
 @endforeach
 @endif
