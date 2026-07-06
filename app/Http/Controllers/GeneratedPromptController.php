@@ -43,7 +43,13 @@ class GeneratedPromptController extends Controller
                 ->firstOrFail();
         }
 
-        $builder->build($project, $finding);
+        try {
+            $builder->build($project, $finding);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Could not generate prompt: '.$e->getMessage());
+        }
 
         return back()->with('success', 'Prompt generated.');
     }
