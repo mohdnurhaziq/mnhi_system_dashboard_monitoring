@@ -34,6 +34,7 @@ class GeneratedPromptController extends Controller
     {
         $validated = $request->validate([
             'finding_id' => ['nullable', 'integer', 'exists:findings,id'],
+            'optimize' => ['sometimes', 'boolean'],
         ]);
 
         $finding = null;
@@ -43,14 +44,22 @@ class GeneratedPromptController extends Controller
                 ->firstOrFail();
         }
 
+        $optimize = (bool) ($validated['optimize'] ?? false);
+
         try {
-            $builder->build($project, $finding);
+            $prompt = $builder->build($project, $finding, $optimize);
         } catch (\Throwable $e) {
             report($e);
 
             return back()->with('error', 'Could not generate prompt: '.$e->getMessage());
         }
 
-        return back()->with('success', 'Prompt generated.');
+        // Tell the user what they actually got, including the fallback case where
+        // AI optimization was requested but the local LLM was unreachable.
+        if ($optimize && ! ($prompt->context_snapshot['optimized'] ?? false)) {
+            return back()->with('error', 'AI optimization unavailable (Ollama offline) — generated a standard prompt instead.');
+        }
+
+        return back()->with('success', $optimize ? 'AI-optimized prompt generated.' : 'Prompt generated.');
     }
 }

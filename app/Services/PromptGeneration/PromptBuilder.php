@@ -5,18 +5,27 @@ namespace App\Services\PromptGeneration;
 use App\Models\Finding;
 use App\Models\GeneratedPrompt;
 use App\Models\Project;
+use App\Services\Llm\PromptOptimizer;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 
 class PromptBuilder
 {
-    public function __construct(private ProjectContextGatherer $context) {}
+    public function __construct(
+        private ProjectContextGatherer $context,
+        private PromptOptimizer $optimizer,
+    ) {}
 
     /**
      * Build (and persist) a ready-to-paste prompt for a project, optionally
-     * scoped to a single finding. Pure local template assembly — no AI calls.
+     * scoped to a single finding.
+     *
+     * Base assembly is pure local templating. When $optimize is true and the
+     * local LLM is reachable, the assembled context is additionally run through
+     * Ollama to produce a focused task brief prepended above the raw context.
      */
-    public function build(Project $project, ?Finding $finding = null): GeneratedPrompt
+    public function build(Project $project, ?Finding $finding = null, bool $optimize = false): GeneratedPrompt
     {
         $metrics = $project->metrics ?? [];
         $path = $project->resolved_path ?? $project->root_path;
@@ -38,18 +47,31 @@ class PromptBuilder
         ];
 
         $view = $finding ? 'prompts.finding-context' : 'prompts.project-context';
-        $body = View::make($view, $context)->render();
-        $body = trim($body);
+        $body = trim(View::make($view, $context)->render());
 
+        // Optionally refine the assembled context into a focused brief via the
+        // local LLM. Falls back to the plain template if unavailable/failed.
+        $optimized = false;
+        if ($optimize && $this->optimizer->available()) {
+            $brief = $this->optimizer->optimize($body);
+            if ($brief !== null) {
+                $body = $brief."\n\n---\n\n## Detailed context (auto-generated)\n\n".$body;
+                $optimized = true;
+            }
+        }
+
+        $prefix = $optimized ? '✨ ' : '';
         $title = $finding
-            ? "Fix: {$finding->message} — {$project->name}"
-            : "Improve {$project->name}";
+            ? "{$prefix}Fix: {$finding->message} — {$project->name}"
+            : "{$prefix}Improve {$project->name}";
 
         return $project->generatedPrompts()->create([
             'finding_id' => $finding?->id,
-            'title' => \Illuminate\Support\Str::limit($title, 250),
+            'title' => Str::limit($title, 250),
             'body' => $body,
             'context_snapshot' => [
+                'optimized' => $optimized,
+                'optimize_requested' => $optimize,
                 'metrics' => $metrics,
                 'findings' => collect($openFindings)->map(fn ($f) => [
                     'rule_key' => $f->rule_key,

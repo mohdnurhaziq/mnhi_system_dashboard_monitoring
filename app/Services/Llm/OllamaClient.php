@@ -59,14 +59,30 @@ class OllamaClient
      */
     public function generateJson(string $prompt, ?string $system = null): ?string
     {
+        return $this->generate($prompt, $system, json: true, temperature: 0.2);
+    }
+
+    /**
+     * Run a single-shot generation returning free-form text. Returns the raw
+     * model response string, or null on any failure (caller degrades).
+     */
+    public function generateText(string $prompt, ?string $system = null, float $temperature = 0.3): ?string
+    {
+        return $this->generate($prompt, $system, json: false, temperature: $temperature);
+    }
+
+    private function generate(string $prompt, ?string $system, bool $json, float $temperature): ?string
+    {
         try {
             $payload = [
                 'model' => $this->model,
                 'prompt' => $prompt,
-                'format' => 'json',
                 'stream' => false,
-                'options' => ['temperature' => 0.2],
+                'options' => ['temperature' => $temperature],
             ];
+            if ($json) {
+                $payload['format'] = 'json';
+            }
             if ($system !== null) {
                 $payload['system'] = $system;
             }

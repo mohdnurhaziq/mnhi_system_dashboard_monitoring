@@ -26,6 +26,8 @@ function MetricRow({ label, value }) {
 export default function ProjectShow({ project }) {
     const [analyzing, setAnalyzing] = useState(false);
     const [openLatestPrompt, setOpenLatestPrompt] = useState(false);
+    const [aiOptimize, setAiOptimize] = useState(false);
+    const [generating, setGenerating] = useState(false);
     const promptsRef = useRef(null);
     const metrics = project.metrics ?? {};
     const git = metrics.git ?? {};
@@ -46,9 +48,14 @@ export default function ProjectShow({ project }) {
     const generatePrompt = (findingId = null) => {
         router.post(
             `/projects/${project.id}/prompts`,
-            findingId ? { finding_id: findingId } : {},
+            {
+                ...(findingId ? { finding_id: findingId } : {}),
+                optimize: aiOptimize,
+            },
             {
                 preserveScroll: true,
+                onStart: () => setGenerating(true),
+                onFinish: () => setGenerating(false),
                 // Reveal the result: expand the newest prompt and scroll to it so
                 // it's obvious a copy-paste prompt was created (not that anything
                 // was "fixed" on disk).
@@ -153,18 +160,39 @@ export default function ProjectShow({ project }) {
                     </div>
 
                     <div className="rounded-lg border border-gray-200 bg-white p-5">
-                        <div className="mb-4 flex items-center justify-between">
+                        <div className="mb-4 flex items-center justify-between gap-3">
                             <h3 className="text-sm font-semibold text-gray-700">
                                 Findings ({openCount} open)
                             </h3>
-                            <button
-                                onClick={() => generatePrompt()}
-                                title="Creates copy-paste instructions covering this whole project. Doesn't modify any files."
-                                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
-                            >
-                                Generate project prompt
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <label
+                                    title="Refine the prompt with your local LLM (Ollama) into a focused brief with prioritized steps & acceptance criteria. Slower; falls back to the standard prompt if Ollama is offline."
+                                    className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-600"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={aiOptimize}
+                                        onChange={(e) => setAiOptimize(e.target.checked)}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    ✨ AI-optimize
+                                </label>
+                                <button
+                                    onClick={() => generatePrompt()}
+                                    disabled={generating}
+                                    title="Creates copy-paste instructions covering this whole project. Doesn't modify any files."
+                                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                                >
+                                    {generating ? 'Generating…' : 'Generate project prompt'}
+                                </button>
+                            </div>
                         </div>
+                        {aiOptimize && (
+                            <p className="-mt-2 mb-3 text-xs text-indigo-600">
+                                ✨ AI-optimize on — prompts are refined by your local LLM (Ollama). This takes a few
+                                seconds; if Ollama is offline you'll get the standard prompt.
+                            </p>
+                        )}
 
                         {byCategory.length === 0 && (
                             resolvedFindings.length > 0 ? (
@@ -221,10 +249,11 @@ export default function ProjectShow({ project }) {
                                                     <div className="ml-3 flex shrink-0 flex-col items-end gap-1">
                                                         <button
                                                             onClick={() => generatePrompt(f.id)}
+                                                            disabled={generating}
                                                             title="Creates copy-paste instructions to fix this finding. Doesn't modify any files — you paste it into Claude Code."
-                                                            className="text-xs font-medium text-indigo-600 hover:underline"
+                                                            className="text-xs font-medium text-indigo-600 hover:underline disabled:opacity-50"
                                                         >
-                                                            Get fix prompt →
+                                                            {generating ? 'Generating…' : 'Get fix prompt →'}
                                                         </button>
                                                         {f.status === 'open' && (
                                                             <button
