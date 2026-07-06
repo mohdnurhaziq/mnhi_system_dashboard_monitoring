@@ -5,6 +5,7 @@ import StackBadge from '@/Components/StackBadge';
 import StatusBadge from '@/Components/StatusBadge';
 import SeverityChip from '@/Components/SeverityChip';
 import CopyButton from '@/Components/CopyButton';
+import { formatDate, formatDateTime } from '@/lib/datetime';
 
 const CATEGORY_META = {
     security: { label: 'Security', hint: 'Potential security risks', accent: 'text-rose-700' },
@@ -235,7 +236,7 @@ export default function ProjectShow({ project }) {
                             <>
                                 <p className="mt-1 text-sm text-gray-700">{project.ai_summary}</p>
                                 <p className="mt-1 text-xs text-gray-400">
-                                    Generated {project.ai_summary_at?.slice(0, 16).replace('T', ' ')}
+                                    Generated {formatDateTime(project.ai_summary_at)}
                                 </p>
                             </>
                         ) : (
@@ -260,14 +261,14 @@ export default function ProjectShow({ project }) {
                     <div className="rounded-lg border border-gray-200 bg-white p-5">
                         <h3 className="mb-3 text-sm font-semibold text-gray-700">Metadata</h3>
                         <MetricRow label="Path" value={<span className="text-xs">{project.resolved_path}</span>} />
-                        <MetricRow label="Last scanned" value={project.last_scanned_at?.slice(0, 19).replace('T', ' ') ?? '—'} />
+                        <MetricRow label="Last scanned" value={formatDateTime(project.last_scanned_at)} />
                     </div>
 
                     <div className="rounded-lg border border-gray-200 bg-white p-5">
                         <h3 className="mb-3 text-sm font-semibold text-gray-700">Git</h3>
                         <MetricRow label="Under git" value={git.has_git ? 'yes' : 'no'} />
                         <MetricRow label="Commits" value={git.has_commits ? git.commit_count : '0'} />
-                        <MetricRow label="Last commit" value={git.last_commit_at?.slice(0, 10) ?? '—'} />
+                        <MetricRow label="Last commit" value={formatDate(git.last_commit_at)} />
                         <MetricRow label="Uncommitted" value={git.uncommitted_files ?? 0} />
                         <MetricRow label="Branch" value={git.current_branch ?? '—'} />
                     </div>
@@ -462,7 +463,7 @@ export default function ProjectShow({ project }) {
                                                 {f.message}
                                             </p>
                                             <p className="mt-0.5 text-xs text-emerald-600">
-                                                Resolved{f.resolved_at ? ` ${f.resolved_at.slice(0, 10)}` : ''}
+                                                Resolved{f.resolved_at ? ` ${formatDate(f.resolved_at)}` : ''}
                                                 {f.source === 'llm' ? ' · AI finding' : ''}
                                             </p>
                                         </div>

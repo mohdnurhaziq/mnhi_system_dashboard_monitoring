@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import StackBadge from '@/Components/StackBadge';
 import StaleIndicator from '@/Components/StaleIndicator';
+import { formatDateTime } from '@/lib/datetime';
 
 function StatCard({ label, value, tone = 'default' }) {
     const tones = {
@@ -86,7 +87,7 @@ export default function DashboardIndex({ stats, needsAttention, staleThresholdDa
                             {aiDigest.content}
                         </pre>
                         <p className="mt-3 text-xs text-gray-400">
-                            Generated {aiDigest.generated_at?.slice(0, 16).replace('T', ' ')} · {aiDigest.model}
+                            Generated {formatDateTime(aiDigest.generated_at)} · {aiDigest.model}
                         </p>
                     </div>
                 ) : (

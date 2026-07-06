@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import CopyButton from '@/Components/CopyButton';
+import { formatDateTime } from '@/lib/datetime';
 
 export default function PromptsIndex({ prompts, projects, filters }) {
     const filterByProject = (id) => {
@@ -36,7 +37,7 @@ export default function PromptsIndex({ prompts, projects, filters }) {
                             <div>
                                 <span className="font-medium">{p.title}</span>
                                 <div className="text-xs text-gray-400">
-                                    {p.project?.name} · {p.created_at?.slice(0, 19).replace('T', ' ')}
+                                    {p.project?.name} · {formatDateTime(p.created_at)}
                                 </div>
                             </div>
                             <CopyButton text={p.body} />
