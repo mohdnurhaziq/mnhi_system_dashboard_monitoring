@@ -5,6 +5,7 @@ namespace App\Services\ProjectScanner;
 use App\Models\Finding;
 use App\Models\Project;
 use App\Services\ProjectDiscovery\ProjectRootResolver;
+use App\Services\ProjectScanner\Metrics\DependencyGatherer;
 use App\Services\ProjectScanner\Metrics\DiagnosticsGatherer;
 use App\Services\ProjectScanner\Metrics\FileMarkerGatherer;
 use App\Services\ProjectScanner\Metrics\GitMetricsGatherer;
@@ -25,6 +26,7 @@ class ProjectScanService
         private LaravelStructureGatherer $laravel,
         private TodoScanner $todos,
         private DiagnosticsGatherer $diagnostics,
+        private DependencyGatherer $dependencies,
         private RuleEngineRunner $ruleEngine,
     ) {}
 
@@ -76,6 +78,7 @@ class ProjectScanService
         $files = $this->files->gather($resolvedPath);
         $todos = $this->todos->gather($resolvedPath);
         $diagnostics = $this->diagnostics->gather($resolvedPath, $stack['stack']);
+        $dependencies = $this->dependencies->gather($resolvedPath);
 
         $metrics = [
             'stack' => $stack['stack'],
@@ -85,6 +88,7 @@ class ProjectScanService
             'files' => $files,
             'todos' => $todos,
             'diagnostics' => $diagnostics,
+            'dependencies' => $dependencies,
             'root_resolution' => [
                 'configured_path' => $configuredPath,
                 'resolved_path' => $resolvedPath,

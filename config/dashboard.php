@@ -8,6 +8,7 @@ use App\Services\RuleEngine\Rules\MissingAppKeyRule;
 use App\Services\RuleEngine\Rules\MissingCiRule;
 use App\Services\RuleEngine\Rules\MissingEnvExampleRule;
 use App\Services\RuleEngine\Rules\MissingEnvFileRule;
+use App\Services\RuleEngine\Rules\MissingLockFileRule;
 use App\Services\RuleEngine\Rules\MissingReadmeRule;
 use App\Services\RuleEngine\Rules\MissingTestsRule;
 use App\Services\RuleEngine\Rules\NoGitRepoRule;
@@ -97,6 +98,7 @@ return [
         'missing_app_key' => MissingAppKeyRule::class,
         'php_syntax_error' => PhpSyntaxErrorRule::class,
         'invalid_composer_json' => InvalidComposerJsonRule::class,
+        'missing_lock_file' => MissingLockFileRule::class,
     ],
 
     'rules_enabled' => [
@@ -115,6 +117,7 @@ return [
         'missing_app_key' => true,
         'php_syntax_error' => true,
         'invalid_composer_json' => true,
+        'missing_lock_file' => true,
     ],
 
     /*

@@ -23,6 +23,41 @@ function MetricRow({ label, value }) {
     );
 }
 
+function DependencyBlock({ label, info, lockName }) {
+    const total = (info.declared ?? 0) + (info.dev ?? 0);
+    return (
+        <div className="border-b border-gray-100 py-2 last:border-0">
+            <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-gray-800">{label}</span>
+                <span className="text-gray-500">
+                    {info.declared ?? 0} deps{info.dev ? ` + ${info.dev} dev` : ''}
+                </span>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+                <DepTag
+                    ok={total === 0 ? null : info.has_lock}
+                    okText={`${lockName} ✓`}
+                    badText={`no ${lockName}`}
+                />
+                <DepTag ok={info.installed} okText="installed" badText="not installed" />
+            </div>
+        </div>
+    );
+}
+
+function DepTag({ ok, okText, badText }) {
+    if (ok === null) return null;
+    return (
+        <span
+            className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                ok ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+            }`}
+        >
+            {ok ? okText : badText}
+        </span>
+    );
+}
+
 export default function ProjectShow({ project }) {
     const [analyzing, setAnalyzing] = useState(false);
     const [openLatestPrompt, setOpenLatestPrompt] = useState(false);
@@ -42,6 +77,7 @@ export default function ProjectShow({ project }) {
     const git = metrics.git ?? {};
     const files = metrics.files ?? {};
     const todos = metrics.todos ?? {};
+    const deps = metrics.dependencies ?? {};
 
     const findings = project.findings ?? [];
     // Resolved findings (auto-detected fixes or manually resolved) are shown in
@@ -185,6 +221,22 @@ export default function ProjectShow({ project }) {
                         <MetricRow label="CI" value={files.has_ci ? 'yes' : 'no'} />
                         <MetricRow label="TODOs" value={todos.count ?? 0} />
                     </div>
+
+                    {deps.has_manifest && (
+                        <div className="rounded-lg border border-gray-200 bg-white p-5">
+                            <h3 className="mb-3 text-sm font-semibold text-gray-700">Dependencies</h3>
+                            {deps.composer && (
+                                <DependencyBlock label="Composer" info={deps.composer} lockName="composer.lock" />
+                            )}
+                            {deps.npm && (
+                                <DependencyBlock
+                                    label="npm"
+                                    info={deps.npm}
+                                    lockName={deps.npm.lockfile ?? 'lock file'}
+                                />
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: findings + prompts */}
