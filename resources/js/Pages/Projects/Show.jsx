@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import StackBadge from '@/Components/StackBadge';
@@ -25,6 +25,8 @@ function MetricRow({ label, value }) {
 
 export default function ProjectShow({ project }) {
     const [analyzing, setAnalyzing] = useState(false);
+    const [openLatestPrompt, setOpenLatestPrompt] = useState(false);
+    const promptsRef = useRef(null);
     const metrics = project.metrics ?? {};
     const git = metrics.git ?? {};
     const files = metrics.files ?? {};
@@ -40,7 +42,19 @@ export default function ProjectShow({ project }) {
         router.post(
             `/projects/${project.id}/prompts`,
             findingId ? { finding_id: findingId } : {},
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                // Reveal the result: expand the newest prompt and scroll to it so
+                // it's obvious a copy-paste prompt was created (not that anything
+                // was "fixed" on disk).
+                onSuccess: () => {
+                    setOpenLatestPrompt(true);
+                    setTimeout(
+                        () => promptsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                        50,
+                    );
+                },
+            },
         );
     };
 
@@ -118,6 +132,21 @@ export default function ProjectShow({ project }) {
 
                 {/* Right: findings + prompts */}
                 <div className="space-y-6 lg:col-span-2">
+                    {/* How this works — the tool prepares instructions, it doesn't edit your projects. */}
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                        <p className="font-semibold">How this works</p>
+                        <p className="mt-1 text-blue-800">
+                            This dashboard <span className="font-medium">finds issues but never changes your projects</span>.
+                            To act on one, generate a <span className="font-medium">prompt</span> — ready-to-use
+                            instructions you copy into an AI coding assistant that does the actual work.
+                        </p>
+                        <ol className="mt-2 ml-4 list-decimal space-y-0.5 text-blue-800">
+                            <li>Click <span className="font-medium">“Get fix prompt”</span> on a finding (or “Generate project prompt” for everything).</li>
+                            <li>The prompt appears below — click <span className="font-medium">Copy</span>.</li>
+                            <li>Paste it into <span className="font-medium">Claude Code</span> (or ChatGPT/Copilot) in that project to carry out the fix.</li>
+                        </ol>
+                    </div>
+
                     <div className="rounded-lg border border-gray-200 bg-white p-5">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-gray-700">
@@ -125,9 +154,10 @@ export default function ProjectShow({ project }) {
                             </h3>
                             <button
                                 onClick={() => generatePrompt()}
+                                title="Creates copy-paste instructions covering this whole project. Doesn't modify any files."
                                 className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500"
                             >
-                                Generate Prompt (whole project)
+                                Generate project prompt
                             </button>
                         </div>
 
@@ -180,9 +210,10 @@ export default function ProjectShow({ project }) {
                                                     <div className="ml-3 flex shrink-0 flex-col items-end gap-1">
                                                         <button
                                                             onClick={() => generatePrompt(f.id)}
-                                                            className="text-xs text-indigo-600 hover:underline"
+                                                            title="Creates copy-paste instructions to fix this finding. Doesn't modify any files — you paste it into Claude Code."
+                                                            className="text-xs font-medium text-indigo-600 hover:underline"
                                                         >
-                                                            Fix prompt
+                                                            Get fix prompt →
                                                         </button>
                                                         <button
                                                             onClick={() =>
@@ -212,13 +243,32 @@ export default function ProjectShow({ project }) {
                     )}
 
                     {(project.generated_prompts ?? []).length > 0 && (
-                        <div className="rounded-lg border border-gray-200 bg-white p-5">
-                            <h3 className="mb-3 text-sm font-semibold text-gray-700">Recent prompts</h3>
+                        <div ref={promptsRef} className="rounded-lg border border-gray-200 bg-white p-5">
+                            <h3 className="text-sm font-semibold text-gray-700">Generated prompts</h3>
+                            <p className="mb-3 mt-0.5 text-xs text-gray-500">
+                                Open one, click <span className="font-medium">Copy</span>, then paste it into
+                                Claude Code in that project to carry out the work.
+                            </p>
                             <div className="space-y-3">
-                                {project.generated_prompts.map((p) => (
-                                    <details key={p.id} className="rounded-md border border-gray-200">
-                                        <summary className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm">
-                                            <span className="font-medium">{p.title}</span>
+                                {project.generated_prompts.map((p, i) => (
+                                    <details
+                                        key={p.id}
+                                        open={i === 0 && openLatestPrompt}
+                                        className={`rounded-md border ${
+                                            i === 0 && openLatestPrompt
+                                                ? 'border-indigo-300 ring-1 ring-indigo-200'
+                                                : 'border-gray-200'
+                                        }`}
+                                    >
+                                        <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-sm">
+                                            <span className="min-w-0 truncate font-medium">
+                                                {i === 0 && openLatestPrompt && (
+                                                    <span className="mr-1.5 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
+                                                        NEW
+                                                    </span>
+                                                )}
+                                                {p.title}
+                                            </span>
                                             <CopyButton text={p.body} />
                                         </summary>
                                         <pre className="max-h-96 overflow-auto whitespace-pre-wrap border-t border-gray-100 bg-gray-50 p-3 text-xs text-gray-700">
