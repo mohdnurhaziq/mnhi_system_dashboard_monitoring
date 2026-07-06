@@ -4,6 +4,7 @@ const NAV = [
     { name: 'Dashboard', route: 'dashboard', href: '/' },
     { name: 'Projects', route: 'projects.index', href: '/projects' },
     { name: 'Prompts', route: 'prompts.index', href: '/prompts' },
+    { name: 'Ask AI', route: 'ai.ask', href: '/ask' },
     { name: 'Settings', route: 'settings.edit', href: '/settings' },
 ];
 

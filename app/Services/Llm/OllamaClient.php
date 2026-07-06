@@ -73,6 +73,12 @@ class OllamaClient
 
     private function generate(string $prompt, ?string $system, bool $json, float $temperature): ?string
     {
+        // Local LLM generations routinely exceed PHP's default 30s
+        // max_execution_time (esp. on the `php artisan serve` dev server), which
+        // would kill the request before Ollama responds. Extend it to cover the
+        // HTTP timeout we're willing to wait for.
+        @set_time_limit($this->timeout + 30);
+
         try {
             $payload = [
                 'model' => $this->model,

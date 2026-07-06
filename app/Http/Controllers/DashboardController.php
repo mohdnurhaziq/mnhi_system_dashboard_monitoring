@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Finding;
 use App\Models\Project;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -50,6 +51,7 @@ class DashboardController extends Controller
             ],
             'needsAttention' => $needsAttention,
             'staleThresholdDays' => $staleDays,
+            'aiDigest' => Cache::get('dashboard.ai_digest'),
         ]);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiController;
 use App\Http\Controllers\AnalysisController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FindingController;
@@ -19,6 +20,13 @@ Route::post('/projects/scan', [ScanController::class, 'scanAll'])->name('project
 Route::post('/projects/discover', [ScanController::class, 'discover'])->name('projects.discover');
 Route::post('/projects/{project}/scan', [ScanController::class, 'scanOne'])->name('projects.scan-one');
 Route::post('/projects/{project}/analyze', [AnalysisController::class, 'analyze'])->name('projects.analyze');
+
+// AI-powered features (local Ollama).
+Route::post('/projects/{project}/ai/summarize', [AiController::class, 'summarize'])->name('ai.summarize');
+Route::post('/projects/{project}/ai/readme', [AiController::class, 'readme'])->name('ai.readme');
+Route::post('/ai/digest', [AiController::class, 'digest'])->name('ai.digest');
+Route::get('/ask', [AiController::class, 'askPage'])->name('ai.ask');
+Route::post('/ask', [AiController::class, 'ask'])->name('ai.ask.submit');
 
 Route::patch('/findings/{finding}', [FindingController::class, 'update'])->name('findings.update');
 

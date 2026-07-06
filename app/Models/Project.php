@@ -18,6 +18,7 @@ class Project extends Model
         'has_commits' => 'boolean',
         'last_scanned_at' => 'datetime',
         'last_commit_at' => 'datetime',
+        'ai_summary_at' => 'datetime',
     ];
 
     public function scanSnapshots(): HasMany

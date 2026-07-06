@@ -54,16 +54,21 @@ class LlmAnalysisService
     private function systemPrompt(): string
     {
         return <<<'SYS'
-        You are a senior engineer reviewing a local software project. You are given
-        its structure and key files. Identify concrete, actionable items in three
-        categories:
+        You are a senior engineer performing a thorough review of a local software
+        project. You are given its structure and a broad sample of its real source
+        files. Identify concrete, actionable items across these categories:
           - "error": something broken or risky that will cause bugs or failures
-          - "idea": a valuable feature or architectural improvement
+          - "gap": missing engineering hygiene (tests, docs, error handling, validation, config)
+          - "idea": a valuable feature or architectural improvement to add
           - "ui": a specific user-interface / UX improvement (only if the project has a UI)
+          - "performance": a concrete performance or efficiency problem (N+1 queries, heavy loops, missing caching/indexes)
+          - "security": a concrete security risk (injection, secrets, missing authz, unsafe input)
         Respond ONLY with a JSON object of this exact shape:
-        {"items":[{"category":"error|idea|ui","severity":"info|warning|critical","title":"short title","detail":"1-3 sentence explanation with a concrete suggestion"}]}
-        Return at most 8 items total, highest-value first. Be specific to THIS project's
-        code — no generic advice. If a category doesn't apply, omit it.
+        {"items":[{"category":"error|gap|idea|ui|performance|security","severity":"info|warning|critical","title":"short title","detail":"1-3 sentence explanation citing the specific file/code and a concrete fix"}]}
+        Aim to cover multiple categories (don't return only one kind). Return up to
+        10 of the most valuable items, highest-severity first. Be specific to THIS
+        project's actual code — cite files. No generic advice. Omit categories that
+        genuinely don't apply.
         SYS;
     }
 
@@ -71,7 +76,7 @@ class LlmAnalysisService
     {
         $metrics = $project->metrics ?? [];
         $tree = $this->context->fileTree($path);
-        $keyFiles = $this->context->keyFileExcerpts($path, $metrics['stack'] ?? null);
+        $keyFiles = $this->context->deepFileExcerpts($path, $metrics['stack'] ?? null);
 
         $findings = $project->findings()
             ->where('source', 'heuristic')
@@ -125,7 +130,7 @@ class LlmAnalysisService
             return null;
         }
 
-        $items = $decoded['items'] ?? (is_list($decoded ?? []) ? $decoded : null);
+        $items = $decoded['items'] ?? (array_is_list($decoded ?? []) ? $decoded : null);
         if (! is_array($items)) {
             return null;
         }
@@ -135,7 +140,7 @@ class LlmAnalysisService
             if (! is_array($item) || empty($item['title'])) {
                 continue;
             }
-            $category = in_array($item['category'] ?? '', ['error', 'idea', 'ui'], true)
+            $category = in_array($item['category'] ?? '', ['error', 'gap', 'idea', 'ui', 'performance', 'security'], true)
                 ? $item['category']
                 : 'idea';
             $severity = in_array($item['severity'] ?? '', ['info', 'warning', 'critical'], true)

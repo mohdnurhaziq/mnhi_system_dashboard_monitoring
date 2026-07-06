@@ -7,12 +7,14 @@ import SeverityChip from '@/Components/SeverityChip';
 import CopyButton from '@/Components/CopyButton';
 
 const CATEGORY_META = {
+    security: { label: 'Security', hint: 'Potential security risks', accent: 'text-rose-700' },
     error: { label: 'Errors', hint: 'Broken or risky — will cause failures', accent: 'text-red-700' },
+    performance: { label: 'Performance', hint: 'Efficiency / speed problems', accent: 'text-cyan-700' },
     gap: { label: 'Gaps', hint: 'Missing hygiene / documentation / tests', accent: 'text-amber-700' },
     idea: { label: 'Ideas', hint: 'AI-suggested features & improvements', accent: 'text-indigo-700' },
     ui: { label: 'UI / UX', hint: 'AI-suggested interface improvements', accent: 'text-fuchsia-700' },
 };
-const CATEGORY_ORDER = ['error', 'gap', 'idea', 'ui'];
+const CATEGORY_ORDER = ['security', 'error', 'performance', 'gap', 'idea', 'ui'];
 
 function MetricRow({ label, value }) {
     return (
@@ -64,6 +66,8 @@ export default function ProjectShow({ project }) {
     const [aiOptimize, setAiOptimize] = useState(false);
     const [generating, setGenerating] = useState(false);
     const [showPromptModal, setShowPromptModal] = useState(false);
+    const [summarizing, setSummarizing] = useState(false);
+    const [draftingReadme, setDraftingReadme] = useState(false);
     const promptsRef = useRef(null);
 
     // Close the prompt modal on Escape.
@@ -115,6 +119,25 @@ export default function ProjectShow({ project }) {
         router.patch(`/findings/${finding.id}`, { status }, { preserveScroll: true });
     };
 
+    const summarize = () =>
+        router.post(`/projects/${project.id}/ai/summarize`, {}, {
+            preserveScroll: true,
+            onStart: () => setSummarizing(true),
+            onFinish: () => setSummarizing(false),
+        });
+
+    // README draft is persisted as a generated prompt, so reuse the prompt modal.
+    const draftReadme = () =>
+        router.post(`/projects/${project.id}/ai/readme`, {}, {
+            preserveScroll: true,
+            onStart: () => setDraftingReadme(true),
+            onFinish: () => setDraftingReadme(false),
+            onSuccess: () => {
+                setOpenLatestPrompt(true);
+                setShowPromptModal(true);
+            },
+        });
+
     return (
         <AppLayout
             title={project.name}
@@ -132,6 +155,14 @@ export default function ProjectShow({ project }) {
                         className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
                     >
                         {analyzing ? 'Analyzing…' : 'AI Analysis'}
+                    </button>
+                    <button
+                        onClick={draftReadme}
+                        disabled={draftingReadme}
+                        title="Draft a starter README.md for this project with your local LLM. Opens as a copy-paste prompt."
+                        className="rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        {draftingReadme ? 'Drafting…' : '✨ Draft README'}
                     </button>
                     <button
                         onClick={() => router.post(`/projects/${project.id}/scan`, {}, { preserveScroll: true })}
@@ -193,6 +224,34 @@ export default function ProjectShow({ project }) {
                 <Link href="/projects" className="ml-auto text-sm text-indigo-600 hover:underline">
                     ← All projects
                 </Link>
+            </div>
+
+            {/* AI summary — what this project is, inferred from its code. */}
+            <div className="mb-6 rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-indigo-700">✨ AI summary</h3>
+                        {project.ai_summary ? (
+                            <>
+                                <p className="mt-1 text-sm text-gray-700">{project.ai_summary}</p>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Generated {project.ai_summary_at?.slice(0, 16).replace('T', ' ')}
+                                </p>
+                            </>
+                        ) : (
+                            <p className="mt-1 text-sm text-gray-500">
+                                No summary yet — generate a plain-English description of what this project is.
+                            </p>
+                        )}
+                    </div>
+                    <button
+                        onClick={summarize}
+                        disabled={summarizing}
+                        className="shrink-0 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-300 hover:bg-indigo-50 disabled:opacity-50"
+                    >
+                        {summarizing ? 'Summarizing…' : project.ai_summary ? 'Regenerate' : 'Summarize'}
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

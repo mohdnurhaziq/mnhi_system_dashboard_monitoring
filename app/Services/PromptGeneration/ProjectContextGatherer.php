@@ -22,7 +22,7 @@ class ProjectContextGatherer
         }
 
         try {
-            $finder = (new Finder())
+            $finder = (new Finder)
                 ->in($path)
                 ->exclude(self::IGNORED_DIRS)
                 ->ignoreDotFiles(true)
@@ -79,6 +79,73 @@ class ProjectContextGatherer
             if (count($excerpts) >= 6) {
                 break;
             }
+        }
+
+        return $excerpts;
+    }
+
+    /**
+     * A deeper sample of real source files across the project (not just the fixed
+     * key-file list), for thorough AI analysis. Starts with the stack's key files,
+     * then adds source files from typical code directories until a size budget or
+     * file cap is reached.
+     *
+     * @return list<array{path: string, content: string}>
+     */
+    public function deepFileExcerpts(string $path, ?string $stack, int $maxFiles = 8, int $budgetBytes = 12000): array
+    {
+        $excerpts = [];
+        $seen = [];
+        $used = 0;
+
+        $add = function (string $relative) use (&$excerpts, &$seen, &$used, $path, $budgetBytes, $maxFiles): bool {
+            if (isset($seen[$relative]) || count($excerpts) >= $maxFiles || $used >= $budgetBytes) {
+                return false;
+            }
+            $full = $path.'/'.$relative;
+            if (! is_file($full)) {
+                return true;
+            }
+            $content = $this->readExcerpt($full, 2600, 80);
+            if ($content !== null && $content !== '') {
+                $excerpts[] = ['path' => $relative, 'content' => $content];
+                $seen[$relative] = true;
+                $used += strlen($content);
+            }
+
+            return true;
+        };
+
+        // 1) The curated key/manifest files first (highest signal).
+        foreach ($this->candidatesForStack($stack) as $relative) {
+            $add($relative);
+        }
+
+        // 2) Source files from typical code directories, until the budget is hit.
+        $sourceDirs = ['app', 'src', 'resources/js', 'routes', 'lib', 'pkg', 'cmd', 'components', 'pages'];
+        $exts = ['php', 'js', 'jsx', 'ts', 'tsx', 'vue', 'go', 'py', 'rb'];
+
+        try {
+            $dirs = array_values(array_filter($sourceDirs, fn ($d) => is_dir($path.'/'.$d)));
+            if ($dirs !== []) {
+                $finder = (new Finder)
+                    ->files()
+                    ->in(array_map(fn ($d) => $path.'/'.$d, $dirs))
+                    ->exclude(self::IGNORED_DIRS)
+                    ->name(array_map(fn ($e) => '*.'.$e, $exts))
+                    ->notPath('/[Tt]ests?\//')
+                    ->ignoreUnreadableDirs()
+                    ->sortByName();
+
+                foreach ($finder as $file) {
+                    if (count($excerpts) >= $maxFiles || $used >= $budgetBytes) {
+                        break;
+                    }
+                    $add(str_replace($path.'/', '', $file->getRealPath() ?: $file->getPathname()));
+                }
+            }
+        } catch (\Throwable) {
+            // Best-effort — return whatever we gathered.
         }
 
         return $excerpts;
