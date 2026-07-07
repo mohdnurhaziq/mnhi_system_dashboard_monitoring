@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Services\ProjectScanner\ProjectScanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,6 +11,8 @@ use Inertia\Response;
 
 class ProjectController extends Controller
 {
+    public function __construct(private ProjectScanService $scanner) {}
+
     public function index(Request $request): Response
     {
         $query = Project::query()
@@ -47,6 +50,17 @@ class ProjectController extends Controller
 
     public function show(Project $project): Response
     {
+        // Silently re-run the heuristic scan on every view (including polling
+        // reloads from the page itself) so findings that are no longer
+        // triggered auto-resolve without the user clicking "Rescan". Failures
+        // (e.g. the directory is briefly unreadable) are swallowed — the page
+        // still renders with the last-known state.
+        try {
+            $this->scanner->scan($project);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $project->load([
             'findings' => fn ($q) => $q->orderByRaw("CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END")
                 ->orderBy('rule_key'),

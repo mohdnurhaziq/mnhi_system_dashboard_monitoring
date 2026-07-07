@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePoll } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import StackBadge from '@/Components/StackBadge';
 import StatusBadge from '@/Components/StatusBadge';
@@ -69,7 +69,20 @@ export default function ProjectShow({ project }) {
     const [showPromptModal, setShowPromptModal] = useState(false);
     const [summarizing, setSummarizing] = useState(false);
     const [draftingReadme, setDraftingReadme] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const promptsRef = useRef(null);
+
+    // Silently rescan while this page is open so findings that are no longer
+    // triggered (e.g. a README was added) auto-resolve without a manual click.
+    // Only the `project` prop is refetched — no full navigation, no flash banners.
+    usePoll(
+        20000,
+        { only: ['project'] },
+        {
+            onStart: () => setSyncing(true),
+            onFinish: () => setSyncing(false),
+        },
+    );
 
     // Close the prompt modal on Escape.
     useEffect(() => {
@@ -143,7 +156,18 @@ export default function ProjectShow({ project }) {
         <AppLayout
             title={project.name}
             actions={
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                    <span
+                        title="Findings are automatically re-checked every 20s while this page is open"
+                        className="flex items-center gap-1.5 text-xs text-gray-400"
+                    >
+                        <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                                syncing ? 'animate-pulse bg-emerald-500' : 'bg-gray-300'
+                            }`}
+                        />
+                        Live
+                    </span>
                     <button
                         onClick={() => {
                             setAnalyzing(true);
