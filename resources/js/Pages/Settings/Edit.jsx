@@ -10,7 +10,9 @@ function Section({ title, children }) {
     );
 }
 
-export default function SettingsEdit({ config, configPath }) {
+export default function SettingsEdit({ config, configPath, aiModel }) {
+    const specs = aiModel.specs;
+
     return (
         <AppLayout title="Settings">
             <Head title="Settings" />
@@ -21,6 +23,59 @@ export default function SettingsEdit({ config, configPath }) {
             </p>
 
             <div className="grid gap-4 md:grid-cols-2">
+                <Section title="AI model">
+                    <div className="mb-3 flex items-center justify-between">
+                        <span className="font-mono text-sm font-medium">{aiModel.configured_name}</span>
+                        <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                aiModel.available
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20'
+                                    : 'bg-red-50 text-red-700 ring-1 ring-red-600/20'
+                            }`}
+                        >
+                            {aiModel.available ? 'reachable' : 'not reachable'}
+                        </span>
+                    </div>
+                    <dl className="space-y-1 text-sm">
+                        {specs ? (
+                            <>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Size on disk</dt>
+                                    <dd className="font-medium">{specs.size_gb} GB</dd>
+                                </div>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Parameters</dt>
+                                    <dd className="font-medium">{specs.parameter_size}</dd>
+                                </div>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Quantization</dt>
+                                    <dd className="font-medium">{specs.quantization}</dd>
+                                </div>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Context length</dt>
+                                    <dd className="font-medium">{specs.context_length.toLocaleString()} tokens</dd>
+                                </div>
+                                <div className="flex justify-between">
+                                    <dt className="text-gray-500">Family</dt>
+                                    <dd className="font-medium">{specs.family}</dd>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-gray-400">
+                                Model not pulled yet — run <code className="font-mono">ollama pull {aiModel.configured_name}</code>.
+                            </p>
+                        )}
+                        <div className="flex justify-between border-t border-gray-100 pt-1">
+                            <dt className="text-gray-500">Request timeout</dt>
+                            <dd className="font-medium">{aiModel.timeout}s</dd>
+                        </div>
+                        <div className="flex justify-between">
+                            <dt className="text-gray-500">Server</dt>
+                            <dd className="font-mono text-xs">{aiModel.base_url}</dd>
+                        </div>
+                    </dl>
+                </Section>
+
                 <Section title="Scan roots">
                     <ul className="space-y-1 text-sm">
                         {config.scan_roots.map((r, i) => (

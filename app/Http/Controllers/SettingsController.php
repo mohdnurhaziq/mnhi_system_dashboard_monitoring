@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Llm\OllamaClient;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SettingsController extends Controller
 {
+    public function __construct(private OllamaClient $ollama) {}
+
     public function edit(): Response
     {
         return Inertia::render('Settings/Edit', [
@@ -20,6 +23,14 @@ class SettingsController extends Controller
                 'rules_enabled' => config('dashboard.rules_enabled'),
             ],
             'configPath' => 'config/dashboard.php',
+            'aiModel' => [
+                'enabled' => $this->ollama->enabled(),
+                'available' => $this->ollama->isAvailable(),
+                'configured_name' => $this->ollama->model(),
+                'base_url' => config('dashboard.ollama.base_url'),
+                'timeout' => config('dashboard.ollama.timeout'),
+                'specs' => $this->ollama->specs(),
+            ],
         ]);
     }
 }

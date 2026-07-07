@@ -54,6 +54,43 @@ class OllamaClient
     }
 
     /**
+     * Fetch the configured model's specs (size, params, context length, quant)
+     * from Ollama's local registry, for display in the UI. Returns null if the
+     * server is unreachable or the model isn't pulled.
+     *
+     * @return array{name: string, size_gb: float, parameter_size: string, quantization: string, context_length: int, family: string}|null
+     */
+    public function specs(): ?array
+    {
+        try {
+            $response = Http::timeout(5)->get($this->baseUrl.'/api/tags');
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $entry = collect($response->json('models', []))
+                ->first(fn ($m) => ($m['name'] ?? null) === $this->model);
+
+            if ($entry === null) {
+                return null;
+            }
+
+            $details = $entry['details'] ?? [];
+
+            return [
+                'name' => $entry['name'],
+                'size_gb' => round(($entry['size'] ?? 0) / 1_000_000_000, 1),
+                'parameter_size' => $details['parameter_size'] ?? 'unknown',
+                'quantization' => $details['quantization_level'] ?? 'unknown',
+                'context_length' => $details['context_length'] ?? 0,
+                'family' => $details['family'] ?? 'unknown',
+            ];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Run a single-shot generation, requesting JSON output. Returns the raw
      * model response string, or null on any failure (caller degrades).
      */
