@@ -126,13 +126,16 @@ return [
     |--------------------------------------------------------------------------
     | Fully local: talks to a locally-running Ollama server. If the server is
     | unreachable, AI analysis degrades gracefully and heuristics still work.
-    | Using mistral:7b (optimized for M2 MacBook: ~4.1GB RAM, ~45-90s inference).
+    | Using mistral:7b. Timeout is generous (300s) because on 8GB Macs, Ollama
+    | inference slows drastically under memory pressure (swapping) when other
+    | apps are open — closing memory-heavy apps (browser, etc.) before running
+    | AI analysis gives much faster, more reliable results.
     | To use a different model: set DASHBOARD_OLLAMA_MODEL in .env
     */
     'ollama' => [
         'enabled' => env('DASHBOARD_OLLAMA_ENABLED', true),
         'base_url' => env('DASHBOARD_OLLAMA_URL', 'http://localhost:11434'),
         'model' => env('DASHBOARD_OLLAMA_MODEL', 'mistral:7b'),
-        'timeout' => env('DASHBOARD_OLLAMA_TIMEOUT', 120),
+        'timeout' => env('DASHBOARD_OLLAMA_TIMEOUT', 300),
     ],
 ];
